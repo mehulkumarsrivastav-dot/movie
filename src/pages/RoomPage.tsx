@@ -382,7 +382,6 @@ export function RoomPage() {
           size={partnerBubble.size}
           x={partnerBubble.x}
           y={partnerBubble.y}
-          containerRef={stageRef}
           onMove={(x, y) => (uiStore.bubblesSwapped ? uiStore.setSelfLayout({ x, y }) : uiStore.setPartnerLayout({ x, y }))}
           onToggleMinimize={() =>
             uiStore.bubblesSwapped
@@ -406,7 +405,6 @@ export function RoomPage() {
             size={selfBubble.size}
             x={selfBubble.x}
             y={selfBubble.y}
-            containerRef={stageRef}
             onFlipCamera={handleFlipCamera}
             onMove={(x, y) => (uiStore.bubblesSwapped ? uiStore.setPartnerLayout({ x, y }) : uiStore.setSelfLayout({ x, y }))}
             onToggleMinimize={() =>
