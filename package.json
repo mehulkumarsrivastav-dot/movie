@@ -17,6 +17,7 @@
     "framer-motion": "^13.1.1",
     "hls.js": "^1.7.1",
     "lucide-react": "^1.34.0",
+    "peerjs": "^1.5.5",
     "postcss": "^8.5.26",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
@@ -33,5 +34,5 @@
     "typescript": "~6.0.2",
     "vite": "^8.2.2"
   },
-  "description": "A private virtual cinema for two \u2014 real-time video calling with synchronized watch-together."
+  "description": "A private virtual cinema for two — real-time video calling with synchronized watch-together."
 }

@@ -43,6 +43,7 @@ export function RoomPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [copiedLink, setCopiedLink] = useState(false)
+  const uiStore = useUiStore()
 
   const roomHook = useRoom({
     uid: user?.uid ?? null,
@@ -57,6 +58,23 @@ export function RoomPage() {
     joinedRef.current = true
     void enterSharedRoom(roomCode)
   }, [user, roomCode, enterSharedRoom])
+
+  // Initialize responsive bubble layouts on load
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const w = window.innerWidth
+    const h = window.innerHeight
+    const isMobile = w < 640
+
+    if (isMobile) {
+      uiStore.setPartnerLayout({ x: Math.max(10, w - 145), y: 55, size: 'sm', minimized: false })
+      uiStore.setSelfLayout({ x: Math.max(10, w - 145), y: Math.max(100, h - 210), size: 'sm', minimized: false })
+    } else {
+      uiStore.setPartnerLayout({ x: Math.max(20, w - 210), y: 60, size: 'md', minimized: false })
+      uiStore.setSelfLayout({ x: Math.max(20, w - 210), y: Math.max(100, h - 230), size: 'md', minimized: false })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Connect call as soon as room is active
   const call = useCall({
@@ -90,7 +108,6 @@ export function RoomPage() {
 
   const screenShare = useScreenShare(() => call.serviceRef.current)
 
-  const uiStore = useUiStore()
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [reactions, setReactions] = useState<ReactionEvent[]>([])
   const [incomingMissYou, setIncomingMissYou] = useState(false)
@@ -98,6 +115,7 @@ export function RoomPage() {
   const [stats, setStats] = useState<RoomStats | null>(null)
   const [rateModalOpen, setRateModalOpen] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [frontCamera, setFrontCamera] = useState(true)
   const stageRef = useRef<HTMLDivElement>(null)
   const watchStartedAt = useRef<number | null>(null)
 
@@ -177,6 +195,22 @@ export function RoomPage() {
     else void document.exitFullscreen()
   }
 
+  const handleFlipCamera = async () => {
+    const newFacing = !frontCamera
+    setFrontCamera(newFacing)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: newFacing ? 'user' : 'environment' },
+      })
+      const track = stream.getVideoTracks()[0]
+      if (track) {
+        await call.serviceRef.current?.replaceVideoTrack(track)
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
   const handleLeave = async () => {
     await call.endCall()
     await leave()
@@ -185,7 +219,7 @@ export function RoomPage() {
   }
 
   const handleCopyLink = () => {
-    void navigator.clipboard.writeText(window.location.origin)
+    void navigator.clipboard.writeText(window.location.origin + window.location.pathname)
     setCopiedLink(true)
     setTimeout(() => setCopiedLink(false), 2000)
   }
@@ -209,6 +243,7 @@ export function RoomPage() {
   }
 
   const partnerPresence = usePresenceLabel(partner)
+  const isPartnerOnline = partnerPresence === 'online' || Boolean(call.remoteStream)
 
   if (!user) return null
 
@@ -246,52 +281,55 @@ export function RoomPage() {
             initial={{ opacity: 0, y: -12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
-            className="z-20 flex items-center justify-between px-5 py-3 border-b border-white/5 bg-cinema-void/90 backdrop-blur-md"
+            className="z-20 flex items-center justify-between px-3 sm:px-5 py-2 sm:py-3 border-b border-white/5 bg-cinema-void/90 backdrop-blur-md"
           >
-            <div className="flex items-center gap-3 text-sm text-white">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 sm:gap-3 text-sm text-white">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <Sparkles size={16} className="text-rose-glow animate-pulse" />
-                <span className="font-display text-base font-medium tracking-wide">Movie Night</span>
+                <span className="font-display text-sm sm:text-base font-medium tracking-wide">Movie Night</span>
               </div>
-              <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-cinema-charcoal px-2.5 py-0.5 text-xs text-cinema-mist border border-white/5">
-                <Heart size={10} className="text-rose-glow fill-rose-glow/20" /> {user.displayName || 'Me'}
+              <span className="inline-flex items-center gap-1 rounded-full bg-cinema-charcoal px-2 sm:px-2.5 py-0.5 text-[11px] sm:text-xs text-cinema-mist border border-white/5 truncate max-w-[100px] sm:max-w-[140px]">
+                <Heart size={10} className="text-rose-glow fill-rose-glow/20 shrink-0" /> <span className="truncate">{user.displayName || 'Me'}</span>
               </span>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 sm:gap-3">
               <ConnectionQualityBadge quality={call.stats.quality} durationLabel={formatCallDuration(call.callStartedAt)} />
               
-              <div className="flex items-center gap-1.5 text-xs text-cinema-mist bg-cinema-charcoal/80 px-2.5 py-1 rounded-full border border-white/5">
-                <span className={`h-2 w-2 rounded-full ${partnerPresence === 'online' ? 'bg-emerald-400 animate-pulse' : 'bg-cinema-mist'}`} />
-                <span>Partner: <strong className={partnerPresence === 'online' ? 'text-emerald-400' : 'text-cinema-fog'}>{partnerPresence === 'online' ? 'Online ❤️' : 'Offline'}</strong></span>
+              <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-cinema-mist bg-cinema-charcoal/80 px-2 sm:px-2.5 py-1 rounded-full border border-white/5">
+                <span className={`h-2 w-2 rounded-full ${isPartnerOnline ? 'bg-emerald-400 animate-pulse' : 'bg-cinema-mist'}`} />
+                <span className="hidden sm:inline">Partner: </span>
+                <strong className={isPartnerOnline ? 'text-emerald-400 font-medium' : 'text-cinema-fog'}>
+                  {isPartnerOnline ? 'Online ❤️' : 'Ready'}
+                </strong>
               </div>
 
               <button
                 onClick={handleCopyLink}
-                className="flex items-center gap-1 text-xs text-cinema-mist hover:text-white bg-white/5 px-2.5 py-1 rounded-full transition"
+                className="flex items-center gap-1 text-[11px] sm:text-xs text-cinema-mist hover:text-white bg-white/5 px-2 sm:px-2.5 py-1 rounded-full transition"
                 title="Copy website link for your partner"
               >
-                {copiedLink ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
-                <span className="hidden sm:inline">{copiedLink ? 'Link Copied!' : 'Copy Link'}</span>
+                {copiedLink ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                <span className="hidden sm:inline">{copiedLink ? 'Copied!' : 'Copy Link'}</span>
               </button>
 
               <button onClick={toggleFullscreen} className="text-cinema-mist hover:text-white p-1" aria-label="Toggle Fullscreen">
-                {isFullscreen ? <Minimize size={15} /> : <Maximize size={15} />}
+                {isFullscreen ? <Minimize size={14} /> : <Maximize size={14} />}
               </button>
 
               <button onClick={() => uiStore.toggleDebugPanel()} className="text-cinema-mist hover:text-white p-1" aria-label="Toggle debugger">
-                <Bug size={15} />
+                <Bug size={14} />
               </button>
 
-              <button onClick={handleLeave} className="flex items-center gap-1 text-xs text-cinema-mist hover:text-rose-glow pl-2 border-l border-white/10">
-                <LogOut size={14} /> Exit
+              <button onClick={handleLeave} className="flex items-center gap-1 text-[11px] sm:text-xs text-cinema-mist hover:text-rose-glow pl-1.5 sm:pl-2 border-l border-white/10">
+                <LogOut size={13} /> <span className="hidden sm:inline">Exit</span>
               </button>
             </div>
           </motion.header>
         )}
       </AnimatePresence>
 
-      {/* Main Stage */}
+      {/* Main Cinema Stage */}
       <div className="relative flex-1">
         <MoviePlayer
           source={source}
@@ -333,33 +371,12 @@ export function RoomPage() {
 
         <FloatingReactions reactions={reactions} />
 
-        {/* Self Camera Bubble */}
-        {!uiStore.selfBubbleHidden && (
-          <CameraBubble
-            stream={call.localStream}
-            label={user.displayName || 'Me'}
-            isSelf
-            muted
-            cameraOff={!call.settings.cameraEnabled}
-            micOff={!call.settings.microphoneEnabled}
-            minimized={selfBubble.minimized}
-            size={selfBubble.size}
-            x={selfBubble.x}
-            y={selfBubble.y}
-            onMove={(x, y) => (uiStore.bubblesSwapped ? uiStore.setPartnerLayout({ x, y }) : uiStore.setSelfLayout({ x, y }))}
-            onToggleMinimize={() =>
-              uiStore.bubblesSwapped
-                ? uiStore.setPartnerLayout({ minimized: !partnerBubble.minimized })
-                : uiStore.setSelfLayout({ minimized: !selfBubble.minimized })
-            }
-          />
-        )}
-
-        {/* Partner Camera Bubble */}
+        {/* Partner Camera Bubble (Top-Right Default) */}
         <CameraBubble
           stream={call.remoteStream}
-          label={partner?.displayName ?? 'Partner'}
+          label={partner?.displayName ? `${partner.displayName} ❤️` : 'Partner ❤️'}
           cameraOff={!call.remoteStream}
+          muted={false}
           minimized={partnerBubble.minimized}
           pinned={uiStore.partnerPinned}
           size={partnerBubble.size}
@@ -374,11 +391,34 @@ export function RoomPage() {
           onTogglePin={() => uiStore.togglePartnerPinned()}
           quality={call.stats.quality}
         />
+
+        {/* Self Camera Bubble (Bottom-Right Default) */}
+        {!uiStore.selfBubbleHidden && (
+          <CameraBubble
+            stream={call.localStream}
+            label={user.displayName ? `${user.displayName} (Me)` : 'Me'}
+            isSelf
+            muted={true}
+            cameraOff={!call.settings.cameraEnabled}
+            micOff={!call.settings.microphoneEnabled}
+            minimized={selfBubble.minimized}
+            size={selfBubble.size}
+            x={selfBubble.x}
+            y={selfBubble.y}
+            onFlipCamera={handleFlipCamera}
+            onMove={(x, y) => (uiStore.bubblesSwapped ? uiStore.setPartnerLayout({ x, y }) : uiStore.setSelfLayout({ x, y }))}
+            onToggleMinimize={() =>
+              uiStore.bubblesSwapped
+                ? uiStore.setPartnerLayout({ minimized: !partnerBubble.minimized })
+                : uiStore.setSelfLayout({ minimized: !selfBubble.minimized })
+            }
+          />
+        )}
       </div>
 
-      {/* Bottom Control Dock */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-6 z-20 flex flex-col items-center gap-3">
-        <div className="pointer-events-auto flex items-center gap-3">
+      {/* Bottom Control Dock (Touch & Mobile Optimized) */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-3 sm:bottom-6 z-20 flex flex-col items-center gap-2 sm:gap-3 px-2">
+        <div className="pointer-events-auto flex items-center gap-2 sm:gap-3 max-w-full overflow-x-auto py-1">
           <ReactionBar onReact={sendReaction} />
           <CoupleFeatures onMissYou={sendMissYou} onKiss={sendKiss} incomingMissYou={incomingMissYou} incomingKiss={incomingKiss} />
         </div>
