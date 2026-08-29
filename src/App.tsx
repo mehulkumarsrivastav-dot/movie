@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { HashRouter, Routes, Route } from 'react-router-dom'
 import { Suspense, lazy } from 'react'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
 
@@ -16,7 +16,7 @@ function RouteFallback() {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <ProtectedRoute>
         <Suspense fallback={<RouteFallback />}>
           <Routes>
@@ -27,6 +27,6 @@ export default function App() {
           </Routes>
         </Suspense>
       </ProtectedRoute>
-    </BrowserRouter>
+    </HashRouter>
   )
 }
