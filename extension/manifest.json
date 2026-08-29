@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Movie Night Sync Companion",
+  "version": "0.1.0",
+  "description": "Relays PLAY/PAUSE/SEEK events from a video you already have legitimate access to, back to your private Movie Night room. Never bypasses DRM, paywalls, or content protection.",
+  "permissions": ["scripting", "storage"],
+  "host_permissions": [],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content-script.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "externally_connectable": {
+    "matches": [
+      "http://localhost:5173/*",
+      "https://YOUR-DEPLOYED-DOMAIN/*"
+    ]
+  },
+  "action": {
+    "default_title": "Movie Night Sync Companion"
+  }
+}
