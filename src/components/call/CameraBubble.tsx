@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import { motion } from 'framer-motion'
 import { Maximize2, Minimize2, MicOff, VideoOff, Pin, PinOff, RefreshCw } from 'lucide-react'
 import { cn } from '../../utils/cn'
@@ -19,6 +19,7 @@ interface CameraBubbleProps {
   onToggleMinimize: () => void
   onTogglePin?: () => void
   onFlipCamera?: () => void
+  containerRef?: RefObject<HTMLDivElement | null>
   quality?: 'excellent' | 'good' | 'weak' | 'reconnecting' | 'unknown'
 }
 
@@ -52,6 +53,7 @@ export function CameraBubble({
   onToggleMinimize,
   onTogglePin,
   onFlipCamera,
+  containerRef,
   quality = 'unknown',
 }: CameraBubbleProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -72,23 +74,24 @@ export function CameraBubble({
   return (
     <motion.div
       drag
+      dragConstraints={containerRef}
       dragMomentum={false}
-      dragElastic={0}
+      dragElastic={0.02}
       initial={false}
       animate={{ width: dims.w, height: dims.h }}
       style={{ position: 'absolute', left: x, top: y, zIndex: pinned ? 40 : 30 }}
       onDragEnd={(_e, info) => {
-        const maxX = typeof window !== 'undefined' ? window.innerWidth - dims.w - 8 : 1000
-        const maxY = typeof window !== 'undefined' ? window.innerHeight - dims.h - 80 : 800
-        const newX = Math.max(8, Math.min(maxX, x + info.offset.x))
-        const newY = Math.max(8, Math.min(maxY, y + info.offset.y))
+        const maxX = typeof window !== 'undefined' ? window.innerWidth - dims.w - 12 : 1000
+        const maxY = typeof window !== 'undefined' ? window.innerHeight - dims.h - 90 : 800
+        const newX = Math.max(12, Math.min(maxX, x + info.offset.x))
+        const newY = Math.max(12, Math.min(maxY, y + info.offset.y))
         onMove(newX, newY)
       }}
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
       onTouchStart={() => setHovered(true)}
       className={cn(
-        'group cursor-grab overflow-hidden rounded-2xl sm:rounded-3xl border shadow-[0_18px_45px_-20px_rgba(0,0,0,0.85)] active:cursor-grabbing touch-none',
+        'group cursor-grab overflow-hidden rounded-2xl sm:rounded-3xl border shadow-[0_18px_45px_-20px_rgba(0,0,0,0.85)] active:cursor-grabbing touch-none select-none',
         pinned ? 'border-rose-glow/80 ring-1 ring-rose-glow/50' : 'border-white/15',
         'bg-cinema-charcoal/90 backdrop-blur-md'
       )}
@@ -99,10 +102,10 @@ export function CameraBubble({
           autoPlay
           playsInline
           muted={muted}
-          className={cn('h-full w-full object-cover', isSelf && 'scale-x-[-1]')}
+          className={cn('h-full w-full object-cover pointer-events-none', isSelf && 'scale-x-[-1]')}
         />
       ) : (
-        <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-cinema-charcoal text-cinema-mist p-2 text-center">
+        <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-cinema-charcoal text-cinema-mist p-2 text-center pointer-events-none">
           <VideoOff size={minimized ? 14 : 18} />
           {!minimized && <span className="text-[10px] truncate max-w-full font-medium">{label}</span>}
         </div>
